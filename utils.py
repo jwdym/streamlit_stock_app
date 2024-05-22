@@ -3,6 +3,7 @@ import datetime
 import prophet
 import plotly
 import sklearn
+import requests
 import random
 import re
 
@@ -125,3 +126,16 @@ def nav_page(page_name, timeout_secs=3):
         </script>
     """ % (page_name, timeout_secs)
     html(nav_script)
+
+def _get_daily_aggregates(date:str, api_key:str, adjusted:str='true'):
+    """
+    Function to get daily aggregates of stock data
+    Inputs:
+        
+    Outputs:
+    """
+    if date is None:
+        date = datetime.datetime.now().strftime('%Y-%m-%d')
+    base_url = 'https://api.polygon.io/v2/aggs/grouped/locale/us/market/stocks/'
+    response = requests.get(f'{base_url}{date}?adjusted={adjusted}&apiKey={api_key}')
+    return(response.json())
