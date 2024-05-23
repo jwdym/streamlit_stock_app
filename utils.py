@@ -131,11 +131,34 @@ def _get_daily_aggregates(date:str, api_key:str, adjusted:str='true'):
     """
     Function to get daily aggregates of stock data
     Inputs:
-        
+        date (str): The date to get stock data for
+        api_key (str): The API key to use
+        adjusted (str): The adjusted flag for the API
     Outputs:
+        response (dict): The stock data response
     """
     if date is None:
         date = datetime.datetime.now().strftime('%Y-%m-%d')
     base_url = 'https://api.polygon.io/v2/aggs/grouped/locale/us/market/stocks/'
     response = requests.get(f'{base_url}{date}?adjusted={adjusted}&apiKey={api_key}')
+    return(response.json())
+
+def _get_ticker_aggregates(min_date:str, max_date:str, stock_symbol:str, api_key:str, adjusted:str='true'):
+    """
+    Function to get ticker aggregates of stock data
+    Inputs:
+        min_date (str): The minimum date to get stock data for
+        max_date (str): The maximum date to get stock data for
+        stock_symbol (str): The stock symbol to get data for
+        api_key (str): The API key to use
+        adjusted (str): The adjusted flag for the API
+    Outputs:
+        response (dict): The stock data response
+    """
+    if min_date is None:
+        min_date = datetime.datetime.now() - datetime.timedelta(days=5 * 365)
+    if max_date is None:
+        max_date = datetime.datetime.now()
+    base_url = f'https://api.polygon.io/v2/aggs/ticker/'
+    response = requests.get(f'{base_url}{stock_symbol}/range/1/day/{min_date}/{max_date}?adjusted={adjusted}&sort=asc&apiKey={api_key}')
     return(response.json())
