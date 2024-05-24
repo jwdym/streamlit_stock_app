@@ -8,6 +8,7 @@ import requests
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
 import plotly.express as px
 
 st.title('Stocks')
@@ -50,4 +51,60 @@ stock_data = utils._get_ticker_aggregates(
     api_key=polygon_api_key,
     adjusted='true'
 )
-st.json(stock_data)
+stock_json = {
+    'Date': [],
+    'Exchange_Symbol': [],
+    'Close_Price': [],
+    'Highest_Price': [],
+    'Lowest_Price': [],
+    'Transactions': [],
+    'Open_Price': [],
+    'Trading_Volume': [],
+    'Volume_Weighted_AVG_Price': []
+}
+
+for result in stock_data['results']:
+    stock_json['Date'].append(datetime.datetime.fromtimestamp(result['t'] / 1000).strftime('%Y-%m-%d'))
+    stock_json['Exchange_Symbol'].append(selected_stock)
+    stock_json['Close_Price'].append(result['c'])
+    stock_json['Highest_Price'].append(result['h'])
+    stock_json['Lowest_Price'].append(result['l'])
+    stock_json['Transactions'].append(result['n'])
+    stock_json['Open_Price'].append(result['o'])
+    stock_json['Trading_Volume'].append(result['v'])
+    stock_json['Volume_Weighted_AVG_Price'].append(result['vw'])
+
+st.subheader('Stock Data')
+stock_df = pd.DataFrame(stock_json)
+st.dataframe(stock_df)
+st.divider()
+
+fig = go.Figure(
+    layout=go.Layout(
+        title=go.layout.Title(text=f"'{selected_stock}' Price Data")
+    )
+)
+for metric in ['Close_Price', 'Highest_Price', 'Lowest_Price', 'Open_Price', 'Volume_Weighted_AVG_Price']:
+    fig.add_trace(go.Scatter(
+        x=stock_df['Date'],
+        y=stock_df[metric],
+        mode='lines',
+        name=metric
+        )
+    )
+st.plotly_chart(fig, theme='streamlit')
+st.divider()
+
+fig = go.Figure(
+    layout=go.Layout(
+        title=go.layout.Title(text=f"'{selected_stock}' Volume Data")
+    )
+)
+for metric in ['Trading_Volume', 'Transactions']:
+    fig.add_trace(go.Bar(
+        x=stock_df['Date'],
+        y=stock_df[metric],
+        name=metric
+        )
+    )
+st.plotly_chart(fig, theme='streamlit')
