@@ -43,6 +43,50 @@ stock_symbols = sorted(stock_symbols)
 selected_stock = st.selectbox('Select a stock symbol', stock_symbols)
 st.divider()
 
+#################
+# Stock details #
+#################
+st.subheader('Stock Details')
+stock_details = utils._get_ticker_details(
+    date=selected_dates[1].strftime('%Y-%m-%d'),
+    stock_symbol=selected_stock,
+    api_key=polygon_api_key
+)
+
+if stock_details['results']['type'] == 'CS':
+    st.markdown(
+        f"""
+        ##### {stock_details['results']['name']}
+        - **Currency**: {stock_details['results']['currency_name']}
+        - **Locale**: {stock_details['results']['locale']}
+        - **Market Cap**: {stock_details['results']['market_cap']:,.0f}
+        - **Primary Exchange**: {stock_details['results']['primary_exchange']}
+        - **Company Type**: {stock_details['results']['sic_description']}
+        - **Listing Date**: {stock_details['results']['list_date']}
+        - {stock_details['results']['homepage_url']}
+
+        {stock_details['results']['description']}
+        """
+    )
+elif stock_details['results']['type'] == 'ETF':
+    st.markdown(
+        f"""
+        ##### {stock_details['results']['name']}
+        - **Currency**: {stock_details['results']['currency_name']}
+        - **Locale**: {stock_details['results']['locale']}
+        - **Primary Exchange**: {stock_details['results']['primary_exchange']}
+        - **Share Class Shares Outstanding**: {stock_details['results']['share_class_shares_outstanding']:,.0f}
+        - **Company Type**: {stock_details['results']['type']}
+        - **Listing Date**: {stock_details['results']['list_date']}
+        """
+    )
+
+st.divider()
+
+##############
+# Stock data #
+##############
+
 # Retrieve stock data
 stock_data = utils._get_ticker_aggregates(
     min_date=selected_dates[0].strftime('%Y-%m-%d'),
@@ -74,11 +118,13 @@ for result in stock_data['results']:
     stock_json['Trading_Volume'].append(result['v'])
     stock_json['Volume_Weighted_AVG_Price'].append(result['vw'])
 
+# Display stock data
 st.subheader('Stock Data')
-stock_df = pd.DataFrame(stock_json)
-st.dataframe(stock_df)
-st.divider()
+with st.expander("Show Stock Data"):
+    stock_df = pd.DataFrame(stock_json)
+    st.dataframe(stock_df)
 
+# Plot price data
 fig = go.Figure(
     layout=go.Layout(
         title=go.layout.Title(text=f"'{selected_stock}' Price Data")
@@ -93,8 +139,8 @@ for metric in ['Close_Price', 'Highest_Price', 'Lowest_Price', 'Open_Price', 'Vo
         )
     )
 st.plotly_chart(fig, theme='streamlit')
-st.divider()
 
+# Plot volume data
 fig = go.Figure(
     layout=go.Layout(
         title=go.layout.Title(text=f"'{selected_stock}' Volume Data")

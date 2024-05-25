@@ -162,3 +162,17 @@ def _get_ticker_aggregates(min_date:str, max_date:str, stock_symbol:str, api_key
     base_url = f'https://api.polygon.io/v2/aggs/ticker/'
     response = requests.get(f'{base_url}{stock_symbol}/range/1/day/{min_date}/{max_date}?adjusted={adjusted}&sort=asc&apiKey={api_key}')
     return(response.json())
+
+def _get_ticker_details(date:str, stock_symbol:str, api_key:str):
+    """
+    Function to retreive stock details
+    Inputs:
+        date (str): The date to get stock data for
+        stock_symbol (str): The stock symbol to get data for
+        api_key (str): The API key to use
+    Outputs:
+        response (dict): The stock data response
+    """
+    base_url = 'https://api.polygon.io/v3/reference/tickers/'
+    response = requests.get(f'{base_url}{stock_symbol}?date={date}&apiKey={api_key}')
+    return(response.json())
