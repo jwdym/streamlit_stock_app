@@ -80,6 +80,31 @@ elif stock_details['results']['type'] == 'ETF':
         - **Listing Date**: {stock_details['results']['list_date']}
         """
     )
+elif stock_details['results']['type'] == 'FUND':
+    st.markdown(
+        f"""
+        ##### {stock_details['results']['name']}
+        - **Currency**: {stock_details['results']['currency_name']}
+        - **Locale**: {stock_details['results']['locale']}
+        - **Market Cap**: {stock_details['results']['market_cap']:,.0f}
+        - **Primary Exchange**: {stock_details['results']['primary_exchange']}
+        - **Company Type**: {stock_details['results']['type']}
+        - **Listing Date**: {stock_details['results']['list_date']}
+        - {stock_details['results']['homepage_url']}
+
+        {stock_details['results']['description']}
+        """
+    )
+elif stock_details['results']['type'] == 'UNIT':
+    st.markdown(
+        f"""
+        ##### {stock_details['results']['name']}
+        - **Currency**: {stock_details['results']['currency_name']}
+        - **Locale**: {stock_details['results']['locale']}
+        - **Primary Exchange**: {stock_details['results']['primary_exchange']}
+        - **Company Type**: {stock_details['results']['sic_description']}
+        """
+    )
 
 st.divider()
 
