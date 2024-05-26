@@ -52,6 +52,10 @@ stock_details = utils._get_ticker_details(
     stock_symbol=selected_stock,
     api_key=polygon_api_key
 )
+try:
+    listing_date = stock_details['results']['list_date']
+except:
+    listing_date = 'N/A'
 
 if stock_details['results']['type'] == 'CS':
     st.markdown(
@@ -62,7 +66,7 @@ if stock_details['results']['type'] == 'CS':
         - **Market Cap**: {stock_details['results']['market_cap']:,.0f}
         - **Primary Exchange**: {stock_details['results']['primary_exchange']}
         - **Company Type**: {stock_details['results']['sic_description']}
-        - **Listing Date**: {stock_details['results']['list_date']}
+        - **Listing Date**: {listing_date}
         - {stock_details['results']['homepage_url']}
 
         {stock_details['results']['description']}
@@ -77,7 +81,7 @@ elif stock_details['results']['type'] == 'ETF':
         - **Primary Exchange**: {stock_details['results']['primary_exchange']}
         - **Share Class Shares Outstanding**: {stock_details['results']['share_class_shares_outstanding']:,.0f}
         - **Company Type**: {stock_details['results']['type']}
-        - **Listing Date**: {stock_details['results']['list_date']}
+        - **Listing Date**: {listing_date}
         """
     )
 elif stock_details['results']['type'] == 'FUND':
@@ -89,7 +93,7 @@ elif stock_details['results']['type'] == 'FUND':
         - **Market Cap**: {stock_details['results']['market_cap']:,.0f}
         - **Primary Exchange**: {stock_details['results']['primary_exchange']}
         - **Company Type**: {stock_details['results']['type']}
-        - **Listing Date**: {stock_details['results']['list_date']}
+        - **Listing Date**: {listing_date}
         - {stock_details['results']['homepage_url']}
 
         {stock_details['results']['description']}
