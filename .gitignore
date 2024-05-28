@@ -146,6 +146,7 @@ dmypy.json
 # Data
 *.csv
 *.json
+*.DS_Store
 
 # Pyre type checker
 .pyre/
