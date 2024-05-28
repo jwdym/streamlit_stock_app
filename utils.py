@@ -3,6 +3,7 @@ import datetime
 import prophet
 import plotly
 import sklearn
+import json
 import requests
 import random
 import re
@@ -176,3 +177,126 @@ def _get_ticker_details(date:str, stock_symbol:str, api_key:str):
     base_url = 'https://api.polygon.io/v3/reference/tickers/'
     response = requests.get(f'{base_url}{stock_symbol}?date={date}&apiKey={api_key}')
     return(response.json())
+
+def update_stock_data(min_date:str, max_date:str, api_key:str):
+    """
+    Function to update stock data
+    Inputs:
+        min_date (str): The minimum date to get stock data for
+        max_date (str): The maximum date to get stock data for
+        api_key (str): The API key to use
+    Outputs:
+        None
+    """
+    # Get polygon data from each date in list
+    counter = 1
+    min_date = datetime.datetime.strptime(min_date, '%Y-%m-%d')
+    max_date = datetime.datetime.strptime(max_date, '%Y-%m-%d')
+    date_list = [(min_date + datetime.timedelta(days=x)).strftime("%Y-%m-%d") for x in range(0, (max_date-min_date).days)]
+
+    # Iterate through dates
+    for date in date_list:
+        try:
+            daily_report = _get_daily_aggregates(
+                date=date,
+                api_key=api_key,
+                adjusted='True'
+            )
+            with open(f'data/daily-aggregates/{date.replace("-", "")}.json', 'w') as outfile:
+                json.dump(daily_report, outfile)
+        except Exception as e:
+            print(e)
+
+        if counter % 5 == 0:
+            print("{:.4f} %".format(100 * counter/len(date_list)))
+        counter += 1
+
+def get_max_date(file_dir:str):
+    """
+    Function to get the max date from a directory of files
+    Inputs:
+        file_dir (str): The directory of files
+    Outputs:
+        max(file_dates) (datetime): The max date from the files
+    """
+    file_names = os.listdir(file_dir)
+    file_dates = []
+    for file_name in file_names:
+        file_dates.append(datetime.datetime.strptime(file_name.split('.')[0], '%Y%m%d'))
+    return(max(file_dates))
+
+def get_min_date(file_dir:str):
+    """
+    Function to get the min date from a directory of files
+    Inputs:
+        file_dir (str): The directory of files
+    Outputs:
+        min(file_dates) (datetime): The min date from the files
+    """
+    file_names = os.listdir(file_dir)
+    file_dates = []
+    for file_name in file_names:
+        file_dates.append(datetime.datetime.strptime(file_name.split('.')[0], '%Y%m%d'))
+    return(min(file_dates))
+
+def create_stock_dataframe(file_dir:str):
+    """
+    Function to create a stock dataframe from a directory of files
+    Inputs:
+        file_dir (str): The directory of files
+    Outputs:
+        stock_json (Pandas Dataframe): The stock data as a dataframe
+    """
+
+    stock_json = {
+        'Date': [],
+        'Exchange_Symbol': [],
+        'Close_Price': [],
+        'Highest_Price': [],
+        'Lowest_Price': [],
+        'Transactions': [],
+        'Open_Price': [],
+        'Timestamp': [],
+        'Trading_Volume': [],
+        'Volume_Weighted_AVG_Price': []
+    }
+
+    # Iterate through files and append data to dict
+    for file_name in os.listdir(file_dir):
+        file_date = datetime.datetime.strptime(file_name.split('.')[0], '%Y%m%d')
+        with open(f'{file_dir}/{file_name}') as f:
+            temp_json = json.load(f)
+
+        if temp_json['queryCount'] == 0:
+            stock_json['Date'].append(file_date.strftime('%Y-%m-%d'))
+            stock_json['Exchange_Symbol'].append(None)
+            stock_json['Close_Price'].append(None)
+            stock_json['Highest_Price'].append(None)
+            stock_json['Lowest_Price'].append(None)
+            stock_json['Transactions'].append(None)
+            stock_json['Open_Price'].append(None)
+            stock_json['Timestamp'].append(None)
+            stock_json['Trading_Volume'].append(None)
+            stock_json['Volume_Weighted_AVG_Price'].append(None)
+
+        else:
+            # Add stock data to json file
+            for stock_file in temp_json['results']:
+                stock_json['Date'].append(file_date.strftime('%Y-%m-%d'))
+                stock_json['Exchange_Symbol'].append(stock_file['T'])
+                stock_json['Close_Price'].append(stock_file['c'])
+                stock_json['Highest_Price'].append(stock_file['h'])
+                stock_json['Lowest_Price'].append(stock_file['l'])
+                try:
+                    stock_json['Transactions'].append(stock_file['n'])
+                except:
+                    stock_json['Transactions'].append(None)
+                stock_json['Open_Price'].append(stock_file['o'])
+                stock_json['Timestamp'].append(stock_file['t'])
+                stock_json['Trading_Volume'].append(stock_file['v'])
+                try:
+                    stock_json['Volume_Weighted_AVG_Price'].append(stock_file['vw'])
+                except:
+                    stock_json['Volume_Weighted_AVG_Price'].append(None)
+
+    return(pd.DataFrame(stock_json))
