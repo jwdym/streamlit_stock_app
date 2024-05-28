@@ -148,6 +148,18 @@ dmypy.json
 *.json
 *.DS_Store
 
+# MLflow
+*.yaml
+*.metrics
+*.name
+*.type
+*.user
+*.runName
+*.txt
+*.pr
+*.history
+mlruns/*
+
 # Pyre type checker
 .pyre/
 
