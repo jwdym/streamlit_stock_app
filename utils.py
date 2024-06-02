@@ -7,13 +7,18 @@ import json
 import requests
 import random
 import re
+import mlflow
+import utils
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+import multiprocessing as mp
 import plotly.graph_objects as go
 
 from prophet import Prophet
 from streamlit.components.v1 import html
+from mlflow.models import infer_signature
+from prophet.diagnostics import cross_validation, performance_metrics
 from sklearn.metrics import explained_variance_score, max_error, mean_absolute_error, mean_squared_error, median_absolute_error, r2_score
 
 
@@ -300,3 +305,72 @@ def create_stock_dataframe(file_dir:str):
                     stock_json['Volume_Weighted_AVG_Price'].append(None)
 
     return(pd.DataFrame(stock_json))
+
+def create_forecast_params(param_dict):
+    print(f'Creating forecast parameters for {param_dict["stock_symbol"]}...')
+    return {
+        'forecast_metric': 'Close_Price',
+        'forecast_window': 30,
+        'stock_symbol': param_dict['stock_symbol'],
+        'df': param_dict['df'].loc[param_dict['df'].Exchange_Symbol == param_dict['stock_symbol']]
+    }
+
+def train_model(params):
+    # Get min and max date for data frame
+    date_sequence = pd.date_range(start=params['df'].Date.min(), end=params['df'].Date.max())
+    date_df = pd.DataFrame({'Date': date_sequence})
+    temp_df = date_df.merge(params['df'], on='Date', how='left')
+    temp_df.fillna(method='ffill', inplace=True)
+
+    # Create a training, testing, and validation dataframe based on a forecasting window
+    # train_df = temp_df.loc[temp_df.Date < temp_df.Date.max() - pd.Timedelta(days=params['forecast_window'] * 2)]
+    # test_df = temp_df.loc[temp_df.Date >= temp_df.Date.max() - pd.Timedelta(days=params['forecast_window'])]
+    # val_df = temp_df.loc[(temp_df.Date >= temp_df.Date.max() - pd.Timedelta(days=params['forecast_window'] * 2)) & (temp_df.Date < temp_df.Date.max() - pd.Timedelta(days=params['forecast_window']))]
+
+    # Rename columns for modeling
+    train_df = temp_df[['Date', params['forecast_metric']]].rename(columns={"Date": "ds", params['forecast_metric']: "y"})
+    # train_df = train_df[['Date', params['forecast_metric']]].rename(columns={"Date": "ds", params['forecast_metric']: "y"})
+    # test_df = test_df[['Date', params['forecast_metric']]].rename(columns={"Date": "ds", params['forecast_metric']: "y"})
+    # val_df = val_df[['Date', params['forecast_metric']]].rename(columns={"Date": "ds", params['forecast_metric']: "y"})
+
+    # Prophet model
+    prophet_model = Prophet(
+        daily_seasonality=False,
+        yearly_seasonality=True, 
+        weekly_seasonality=True, 
+        seasonality_mode='multiplicative'
+    )
+    prophet_model.add_seasonality(name='monthly', period=30.5, fourier_order=4)
+    prophet_model.add_seasonality('quarterly', period=91.25, fourier_order=8)
+    print(f'Fitting model for {params["stock_symbol"]}...')
+    with mlflow.start_run(nested=True, run_name=f"{params['stock_symbol']}-{datetime.datetime.strftime(train_df.ds.max(), '%Y%m%d')}") as child_run:
+        prophet_model.fit(train_df)
+
+        # extract and log parameters such as changepoint_prior_scale in the mlflow run
+        model_params = {
+            name: value for name, value in vars(prophet_model).items() if np.isscalar(value)
+        }
+        mlflow.log_params(model_params)
+
+        # Cross validation
+        # initial_days = int(train_df.shape[0] * 0.9) # get 90% of available data for initial period
+        initial_days = 900 # default at 900 for now
+        cv_results = cross_validation(
+            prophet_model, initial=f"{initial_days} days", period=f"{params['forecast_window']} days", horizon=f"{params['forecast_window']} days"
+        )
+
+        # Calculate metrics from cv_results, then average each metric across all backtesting windows and log to mlflow
+        cv_metrics = ["mse", "rmse", "mape"]
+        metrics_results = performance_metrics(cv_results, metrics=cv_metrics)
+        average_metrics = metrics_results.loc[:, cv_metrics].mean(axis=0).to_dict()
+        mlflow.log_metrics(average_metrics)
+
+        # Calculate model signature
+        train = prophet_model.history
+        predictions = prophet_model.predict(prophet_model.make_future_dataframe(params['forecast_window']))
+        signature = infer_signature(train, predictions)
+
+        model_info = mlflow.prophet.log_model(
+            prophet_model, "prophet-model", signature=signature
+        )
+    print(f'Finished modeling for {params["stock_symbol"]}...')
