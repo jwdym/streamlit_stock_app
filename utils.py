@@ -343,7 +343,13 @@ def train_model(params):
     prophet_model.add_seasonality(name='monthly', period=30.5, fourier_order=4)
     prophet_model.add_seasonality('quarterly', period=91.25, fourier_order=8)
     print(f'Fitting model for {params["stock_symbol"]}...')
-    with mlflow.start_run(nested=True, run_name=f"{params['stock_symbol']}-{datetime.datetime.strftime(train_df.ds.max(), '%Y%m%d')}") as child_run:
+    mlflow.set_tracking_uri(uri=params['tracking_uri'])
+    with mlflow.start_run(
+        run_name=f"{params['stock_symbol']}-{datetime.datetime.strftime(train_df.ds.max(), '%Y%m%d')}",
+        experiment_id=params['experiment_id'],
+        description="child",
+        nested=True
+    ) as child_run:
         prophet_model.fit(train_df)
 
         # extract and log parameters such as changepoint_prior_scale in the mlflow run

@@ -157,7 +157,10 @@ dmypy.json
 *.runName
 *.txt
 *.pr
+*/MLmodel
 *.history
+*/prophet-model
+*/metadata
 mlruns/*
 
 # Pyre type checker
