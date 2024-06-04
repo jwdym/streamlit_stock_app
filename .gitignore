@@ -162,6 +162,7 @@ dmypy.json
 */prophet-model
 */metadata
 mlruns/*
+mlartifacts/*
 
 # Pyre type checker
 .pyre/
