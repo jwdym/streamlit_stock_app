@@ -322,16 +322,8 @@ def train_model(params):
     temp_df = date_df.merge(params['df'], on='Date', how='left')
     temp_df.fillna(method='ffill', inplace=True)
 
-    # Create a training, testing, and validation dataframe based on a forecasting window
-    # train_df = temp_df.loc[temp_df.Date < temp_df.Date.max() - pd.Timedelta(days=params['forecast_window'] * 2)]
-    # test_df = temp_df.loc[temp_df.Date >= temp_df.Date.max() - pd.Timedelta(days=params['forecast_window'])]
-    # val_df = temp_df.loc[(temp_df.Date >= temp_df.Date.max() - pd.Timedelta(days=params['forecast_window'] * 2)) & (temp_df.Date < temp_df.Date.max() - pd.Timedelta(days=params['forecast_window']))]
-
     # Rename columns for modeling
     train_df = temp_df[['Date', params['forecast_metric']]].rename(columns={"Date": "ds", params['forecast_metric']: "y"})
-    # train_df = train_df[['Date', params['forecast_metric']]].rename(columns={"Date": "ds", params['forecast_metric']: "y"})
-    # test_df = test_df[['Date', params['forecast_metric']]].rename(columns={"Date": "ds", params['forecast_metric']: "y"})
-    # val_df = val_df[['Date', params['forecast_metric']]].rename(columns={"Date": "ds", params['forecast_metric']: "y"})
 
     # Prophet model
     prophet_model = Prophet(

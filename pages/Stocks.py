@@ -40,7 +40,11 @@ stock_symbols = [result['T'] for result in stock_query['results']]
 stock_symbols = sorted(stock_symbols)
 
 # Choose stock symbol
-selected_stock = st.selectbox('Select a stock symbol', stock_symbols)
+try:
+    stock_symbol = st.session_state('stock_symbol')
+except:
+    stock_symbol = stock_symbols[0]
+selected_stock = st.selectbox('Select a stock symbol', stock_symbols, placeholder=stock_symbols)
 st.divider()
 
 #################

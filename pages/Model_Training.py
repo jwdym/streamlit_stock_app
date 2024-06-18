@@ -25,7 +25,21 @@ mlflow.set_tracking_uri(uri=f"http://{url}:{port}")
 st.title('Forecast Model Training')
 st.markdown(f'[MLFlow url]({mlflow.get_tracking_uri()})')
 
+# Get Polygon API data
+file_path = os.path.join(os.getcwd().replace('/pages', ''), 'keys.json')
+with open(file_path, 'r') as file:
+    keys_dict = json.load(file)
+polygon_api_key = keys_dict['POLYGON_API_KEY']
+
+@st.cache_data
+def load_stock_data(file_path:str):
+    stock_df = pd.read_csv(file_path)
+    stock_df['Date'] = pd.to_datetime(stock_df['Date'])
+    return stock_df
+
 # Update stock data
+st.subheader('Update Data')
+st.text('Update stock data with latest information.')
 if st.checkbox("Update Stock Data"):
     # Get polygon key
     polygon_api_key = json.load(open('keys.json'))['POLYGON_API_KEY']
@@ -51,8 +65,11 @@ if st.checkbox("Update Stock Data"):
 
     # Save dataframe
     stock_df.to_csv('data/stock_data/data.csv', index=False)
+st.divider()
 
 # Train model
+st.subheader('Model Training')
+st.text('Train a model to forecast stock prices, WARGNING: This may take a while.')
 if st.checkbox("Train Model"):
     # Load stock data if not already loaded
     try:
@@ -94,33 +111,4 @@ if st.checkbox("Train Model"):
         pool = mp.Pool(processes=mp.cpu_count()-1)
         pool.map(utils.train_model, params)
     pool.close()
-
-# Evaluate model
-if st.checkbox("Evaluate Model"):
-    # Select experiment ID
-    experiment_id = st.selectbox('Select Experiment ID', os.listdir('mlruns'))
-
-    try:
-        stock_df
-    except Exception as e:
-        print(e)
-        stock_df = pd.read_csv('data/stock_data/data.csv')
-        stock_df['Date'] = pd.to_datetime(stock_df['Date'])
-
-    # Load model data
-    model_runs = mlflow.search_runs(experiment_ids=experiment_id)
-
-    # Simulate selecting stock symbol
-    stock_symbols = list(model_runs['tags.mlflow.runName'])
-    stock_symbols = [x.split('-')[0] for x in stock_symbols]
-    stock_symbol = st.selectbox('Select Stock Symbol', stock_symbols)
-
-    # filter table based on selected stock
-    model_path = model_runs[model_runs['tags.mlflow.runName'].str.contains(stock_symbol)]['artifact_uri'].values[0]
-    model_path = os.path.join(model_path, 'prophet-model')
-    model = mlflow.prophet.load_model(model_path)
-
-    forecast_period = st.number_input('Forecast Period', min_value=1, max_value=365, value=30)
-
-    forecast = model.predict(model.make_future_dataframe(periods=forecast_period))
-    st.plotly_chart(plot_plotly(model, forecast, xlabel='Date', ylabel='Close Price'))
+st.divider()
